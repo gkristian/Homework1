@@ -3,15 +3,20 @@ package homework1;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class ClientSocket implements Runnable {
 
-    
+
+
+import java.util.concurrent.ArrayBlockingQueue;
+
+public class ClientSocket implements Runnable {
+	
     private Socket clientSocket;
     private String serverAddress;
     int serverPortInt;
@@ -21,6 +26,9 @@ public class ClientSocket implements Runnable {
     private static String msg;
     private static String msg2;   
     private final BlockingQueue queue;
+    
+    private String ReceivedDataFromServer;
+    private String ReceivedDataFromMain;
                
     //CONSTRUCTOR
     public ClientSocket(String serverAddress,int serverPortInput,BlockingQueue queue) {
@@ -32,36 +40,32 @@ public class ClientSocket implements Runnable {
 //This will run automatically when you start the thread
     public void run()
     {
-        //ADD CODE HERE
-        System.out.println("\n\n++++++++++++++++++++++++++++");
-        System.out.println("Thread clientSocket started!");
-        System.out.println("++++++++++++++++++++++++++++");
-       
+ 	
         System.out.println(serverAddress);
         System.out.println(serverPortInt);
         
+        //Initialize socket connection
         InitializeConnection();
+        System.out.println("2 Socket : Connection initialized");
+        Sleep(1000);
         
-        //First, retreive data and pass to main thread to be splitted
-        String ReceivedDataFromServer;
-        String ReceivedDataFromMain;
-        ReceivedDataFromServer = ReceiveFromServer();
-        System.out.println("From server : "+ReceivedDataFromServer);
-        SendToMain(ReceivedDataFromServer);
+        //First time receive message from server
+        String msga = null;
+        try {
+			msga = ReceiveFromServer();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
         
-        while(true){
-            //Wait for the player to guess a letter/word, then send it to server
-            ReceivedDataFromMain = ReceiveFromMain();
-            if ("end".equals(ReceivedDataFromMain)) break; //Break all if reach end of game
-            SendToServer(ReceivedDataFromMain);
-            
-            //Wait for server reply, then pass any message from server to ClientMain
-            ReceivedDataFromServer = ReceiveFromServer();
-            SendToMain(ReceivedDataFromServer);
-        }
+        //Send word and attempt to main, unsplitted
+        System.out.println("3B Socket : "+ msga);
+        SendToMain(msga);
+       
+        
+        
         
         //Program will reach here if it reach end
-        CloseConnection();
+        //CloseConnection();
     }    
 
     //FUNCTIONS  
@@ -87,7 +91,7 @@ public class ClientSocket implements Runnable {
             System.err.println(e.toString());
             System.exit(1);
         }    
-        System.out.println("Connection initialized");
+        //System.out.println("Connection initialized");
     }   
     
     //Convert string message to bytestream and send it
@@ -102,26 +106,20 @@ public class ClientSocket implements Runnable {
     }
     
     //Receive bytestream from server, convert to string, return it 
-    private String ReceiveFromServer() {
-        byte[] fromServer = new byte[4096];
-        int bytesRead = 0;
-        int n;
-        String fromServerString = null;
+    private String ReceiveFromServer() throws IOException {
+        String fromServerString = "";
+        System.out.println("3A Socket : Inside ReceiveFromServer");
         
-        try {
-            while ((n = in.read(fromServer, bytesRead, 256)) != -1)
-            {
-                fromServerString = new String(fromServer, "UTF-8");     //Convert bytestream to string
-            }
-        } catch (IOException e) {
-            System.err.println(e.toString());
-        }      
+        byte[] fromServer = new byte[40];
+        int n = in.read(fromServer, 0, fromServer.length);
+        fromServerString = new String(fromServer);
         return fromServerString;
     }
     
     //Send data to main thread using LinkedBlockingQueue
     private void SendToMain(String msg){
         try {
+        	
             queue.put(msg);
         } catch (InterruptedException e) {
             System.err.println(e.toString());
@@ -145,9 +143,17 @@ public class ClientSocket implements Runnable {
             in.close();
             clientSocket.close();
         } catch (IOException e) {
-            System.out.println(e.toString());
+            System.err.println(e.toString());
         }
-        
     }
 
+    private void Sleep(int time){
+        try {
+			Thread.sleep(time);
+		} catch (InterruptedException e) {	
+			e.printStackTrace();
+		}
+    }
 }
+
+
