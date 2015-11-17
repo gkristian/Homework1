@@ -39,28 +39,37 @@ public class ClientSocket implements Runnable {
     
 //This will run automatically when you start the thread
     public void run()
-    {
- 	
+    {	
         System.out.println(serverAddress);
         System.out.println(serverPortInt);
         
         //Initialize socket connection
         InitializeConnection();
         System.out.println("2 Socket : Connection initialized");
-        Sleep(1000);
+        Sleep(100);
         
         //First time receive message from server
         String msga = null;
-        try {
-			msga = ReceiveFromServer();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		msga = ReceiveFromServer();
+
         
         //Send word and attempt to main, unsplitted
         System.out.println("3B Socket : "+ msga);
         SendToMain(msga);
-       
+        Sleep(500); //Sleep to give MainClient time to take the data
+        //While playing game
+        String update;
+        while(true){
+        	update = ReceiveFromMain();
+        	System.out.println("2 Socket : Rc fr main, forward to server :---"+update+"---");
+        	SendToServer(update);
+        	Sleep(100);
+        	
+        	update = ReceiveFromServer();
+        	System.out.println("3 Socket : Update from server, forward :---"+update+"---");
+        	SendToMain(update);
+        	Sleep(100);
+        }
         
         
         
@@ -106,14 +115,17 @@ public class ClientSocket implements Runnable {
     }
     
     //Receive bytestream from server, convert to string, return it 
-    private String ReceiveFromServer() throws IOException {
+    private String ReceiveFromServer()  {
         String fromServerString = "";
-        System.out.println("3A Socket : Inside ReceiveFromServer");
         
-        byte[] fromServer = new byte[40];
-        int n = in.read(fromServer, 0, fromServer.length);
-        fromServerString = new String(fromServer);
-        return fromServerString;
+        try {
+        	byte[] fromServer = new byte[40];
+        	int n = in.read(fromServer, 0, fromServer.length);
+        	fromServerString = new String(fromServer);
+        } catch (IOException e) {
+            System.err.println(e.toString());
+        }        
+    	return fromServerString;
     }
     
     //Send data to main thread using LinkedBlockingQueue
