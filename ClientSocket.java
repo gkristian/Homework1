@@ -61,6 +61,7 @@ public class ClientSocket implements Runnable {
         String update;
         while(true){
         	update = ReceiveFromMain();
+        	if (update == "EKZIT") break; //Break if receive EKZIT from Main
         	System.out.println("2 Socket : Rc fr main, forward to server :---"+update+"---");
         	SendToServer(update);
         	Sleep(100);
@@ -71,10 +72,8 @@ public class ClientSocket implements Runnable {
         	Sleep(100);
         }
         
-        
-        
         //Program will reach here if it reach end
-        //CloseConnection();
+        CloseAll();
     }    
 
     //FUNCTIONS  
@@ -149,7 +148,7 @@ public class ClientSocket implements Runnable {
     }        
     
     //To close all kind of connection with server
-    private void CloseConnection() {
+    private void CloseAll() {
         try {
             out.close();
             in.close();
