@@ -33,19 +33,17 @@ public class ClientMain extends JFrame implements ActionListener {
 	private final int width = Toolkit.getDefaultToolkit().getScreenSize().width;
 	private final int height = Toolkit.getDefaultToolkit().getScreenSize().height;
 	private JPanel mainPanel;
-	private Label wordLabel,attemptLabel,guessHistoryLabel;
+	private Label scoreLabel,wordLabel,attemptLabel,guessHistoryLabel;
 	private JTextField guessField;
 	private JButton submit;
 	
-    String word;
-    String availableAttempt;
-    String gameStatus;
-    String playerInput;
-    String currentGuess;
+    String score, newscore, word, availableAttempt, gameStatus, playerInput, currentGuess;
     String guessHistory = "";
     
+    Boolean isStillPlaying = true;
+    
     public static void main(String[] args) throws IOException, InterruptedException {      
-        new ClientMain();
+    	new ClientMain();
     }
     
     //CONSTRUCTOR
@@ -68,13 +66,23 @@ public class ClientMain extends JFrame implements ActionListener {
     	CustomSplitter(msga);
     	word = AfterSplit[0];
     	availableAttempt = AfterSplit[1];
-    	gameStatus = AfterSplit[2]; 
+    	score = AfterSplit[2];
+    	 
     	System.out.println(word);
     	System.out.println(availableAttempt);
-    	System.out.println(gameStatus);
+    	
     	
     	//Setup first time GUI
+    	//while (isStillPlaying){
     	setupGui();
+    	//}
+    	//while (still playing) {
+    	//	receive
+    	//if word = WIN/LOSE then break
+    	//	askinput
+    	//	sendtoserver
+    	//}
+    	//endGame;
     	
     }
 
@@ -106,6 +114,29 @@ public class ClientMain extends JFrame implements ActionListener {
     	serverPortInt = Integer.parseInt(serverPortInput);       
     }    
         
+    private void WinAskReplay(){
+    	String[] options = new String[2];
+    	options[0] = new String("Yes");
+    	options[1] = new String("No");
+    	int res = JOptionPane.showOptionDialog(null,"You Win! Replay?","Congratulations", 0,JOptionPane.INFORMATION_MESSAGE,null,options,null);
+        
+    	switch (res) {
+        	case JOptionPane.YES_OPTION:
+        	JOptionPane.showMessageDialog(null, "Process Successfully");
+        	
+        	case JOptionPane.NO_OPTION:
+        	JOptionPane.showMessageDialog(null, "Process is Canceled");
+        break;
+    	}
+    }
+    
+    private void LoseAskReplay(){
+    	String[] options = new String[2];
+    	options[0] = new String("Yes");
+    	options[1] = new String("No");
+    	JOptionPane.showOptionDialog(null,"You Lose! Replay?","Congratulations", 0,JOptionPane.INFORMATION_MESSAGE,null,options,null);
+    }
+    
     private void InitializeSocket(){
         //Connect to server by start a thread    	
         (new Thread(new ClientSocket(serverAddressInput,serverPortInt,queue))).start();
@@ -134,7 +165,7 @@ public class ClientMain extends JFrame implements ActionListener {
     
     private void CustomSplitter(String rawString){
     	//SPLIT INTO SEVERAL STRINGS LIMITED BY SPACE
-        AfterSplit = rawString.split("\\s+");  
+        AfterSplit = rawString.split("#");  
     }
     
     private void EndMainClient() throws InterruptedException {
@@ -145,24 +176,33 @@ public class ClientMain extends JFrame implements ActionListener {
 	    TimeUnit.SECONDS.sleep(1);   
 	    System.exit(0);
 	}
+    private void Sleep(int time){
+        try {
+			Thread.sleep(time);
+		} catch (InterruptedException e) {	
+			e.printStackTrace();
+		}
+    }
 
     private void setupGui(){
     	JFrame f = new JFrame();
-    	f.setBounds(0,0,300,200); 
+    	f.setBounds(0,0,500,300); 
     	
     	//Specify panel. Only use 1 big panel 
     	mainPanel = new JPanel();
     	mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
     	
     	//Specify components. ADD COMPONENT ABOVE!!!!
+    	scoreLabel = new Label("Your score now : " + score);
     	wordLabel = new Label("Come on, guess it		: " + word);
     	attemptLabel = new Label("Your available attempts	: " + availableAttempt);
     	guessHistoryLabel = new Label("You have guessed			: " + guessHistory);
     	guessField = new JTextField(20);
     	submit = new JButton("Guess!"); 
-    		submit.addActionListener(this);
+    		submit.addActionListener(this); 
     	
     	//Put components to panels
+    	mainPanel.add(scoreLabel);
     	mainPanel.add(wordLabel);
     	mainPanel.add(attemptLabel);
     	mainPanel.add(guessHistoryLabel);
@@ -185,14 +225,47 @@ public class ClientMain extends JFrame implements ActionListener {
 		currentGuess = playerInput.toUpperCase();
 		
 		//Apply space and append to history to be shown
-		currentGuess += " ";
-		guessHistory += currentGuess;
+		guessHistory = guessHistory+" "+currentGuess;
+
+		//Send to Server
+		System.out.println("1 Main : Send to socket : "+currentGuess);
+		SendToSocket(currentGuess);
+		Sleep(100);//Sleep to give socket time to take the data
 		
-		//Update GUI
+		//Receive back update from server
+		String msgb = ReceiveFromSocket();
+		System.out.println("4 Main : Update fr socket : "+msgb);
+		
+		//Do the rest
+		CustomSplitter(msgb);
+    	word = AfterSplit[0];
+    	availableAttempt = AfterSplit[1];
+    	newscore = AfterSplit[2];
+    	System.out.println("SCORE :"+score);
+    	System.out.println("NEWSCORE :"+newscore);
+    	int scoreInt = Integer.parseInt(score.trim());
+    	int newscoreInt = Integer.parseInt(newscore.trim());
+    	System.out.println("SCORE int :"+scoreInt);
+    	System.out.println("NEWSCORE int :"+newscoreInt);
+    	
+    	//Update
+    	scoreLabel.setText("Your score now : " + newscore);
+		wordLabel.setText("Come on, guess it		: " + word);
+		attemptLabel.setText("Your available attempts	: " + availableAttempt);
 		guessHistoryLabel.setText("You have guessed			: "+guessHistory);
 		guessField.setText("");
 		
+    	//CHECK IF THE GAME REACH END OR NOT 
+    	if (newscoreInt > scoreInt) {
+    		//WIN
+    		System.out.println("WIN!!!!!");
+    		SendToSocket("ekzit");
+    		System.exit(1);
+    		
+    	} 
+    	else if (newscoreInt < scoreInt) {
+    		//LOSE
+    		System.out.println("LOSE!!!!!");
+    	}
 	}
-    
-    
 }
