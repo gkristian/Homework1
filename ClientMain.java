@@ -40,7 +40,7 @@ public class ClientMain extends JFrame implements ActionListener {
     String score, newscore, word, availableAttempt, gameStatus, playerInput, currentGuess;
     String guessHistory = "";
     
-    Boolean isStillPlaying = true;
+    Boolean isStillPlaying = true, true1 = true, false1 = false;
     
     public static void main(String[] args) throws IOException, InterruptedException {      
     	new ClientMain();
@@ -74,7 +74,7 @@ public class ClientMain extends JFrame implements ActionListener {
     	
     	//Setup first time GUI
     	//while (isStillPlaying){
-    	setupGui();
+    	SetupGui();
     	//}
     	//while (still playing) {
     	//	receive
@@ -108,34 +108,12 @@ public class ClientMain extends JFrame implements ActionListener {
     	//If one of the field empty, use default value 
     	if(serverAddressInput.isEmpty() == true || serverPortInput.isEmpty() == true){
         	serverAddressInput = "localhost";
-        	serverPortInput = "1234";   
+        	serverPortInput = "4444";   
     	}
     		
     	serverPortInt = Integer.parseInt(serverPortInput);       
     }    
         
-    private void WinAskReplay(){
-    	String[] options = new String[2];
-    	options[0] = new String("Yes");
-    	options[1] = new String("No");
-    	int res = JOptionPane.showOptionDialog(null,"You Win! Replay?","Congratulations", 0,JOptionPane.INFORMATION_MESSAGE,null,options,null);
-        
-    	switch (res) {
-        	case JOptionPane.YES_OPTION:
-        	JOptionPane.showMessageDialog(null, "Process Successfully");
-        	
-        	case JOptionPane.NO_OPTION:
-        	JOptionPane.showMessageDialog(null, "Process is Canceled");
-        break;
-    	}
-    }
-    
-    private void LoseAskReplay(){
-    	String[] options = new String[2];
-    	options[0] = new String("Yes");
-    	options[1] = new String("No");
-    	JOptionPane.showOptionDialog(null,"You Lose! Replay?","Congratulations", 0,JOptionPane.INFORMATION_MESSAGE,null,options,null);
-    }
     
     private void InitializeSocket(){
         //Connect to server by start a thread    	
@@ -168,14 +146,6 @@ public class ClientMain extends JFrame implements ActionListener {
         AfterSplit = rawString.split("#");  
     }
     
-    private void EndMainClient() throws InterruptedException {
-	    SendToSocket("end");
-	    System.out.println("Closing connection to server....");            
-	    TimeUnit.SECONDS.sleep(2);
-	    System.out.println("Goodbye!");
-	    TimeUnit.SECONDS.sleep(1);   
-	    System.exit(0);
-	}
     private void Sleep(int time){
         try {
 			Thread.sleep(time);
@@ -183,8 +153,101 @@ public class ClientMain extends JFrame implements ActionListener {
 			e.printStackTrace();
 		}
     }
+    
+    private void SendGuess(){
+		//When user press button
+		//First, get text field and convert all to uppercase -> need this??
+		playerInput = guessField.getText();	
+		currentGuess = playerInput.toUpperCase();
+		
+		//Apply space and append to history to be shown
+		guessHistory = guessHistory+" "+currentGuess;
 
-    private void setupGui(){
+		//Send to Server
+		System.out.println("1 Main : Send to socket : "+currentGuess);
+		SendToSocket(currentGuess);
+		Sleep(100);//Sleep to give socket time to take the data
+    }
+    
+    private void ReceiveUpdateGui(){
+		//Receive back update from server
+		String msgb = ReceiveFromSocket();
+		System.out.println("4 Main : Update fr socket : "+msgb);
+		
+		//Do the rest
+		CustomSplitter(msgb);
+    	word = AfterSplit[0];
+    	availableAttempt = AfterSplit[1];
+    	newscore = AfterSplit[2];
+    	    	
+    	//Update
+    	scoreLabel.setText("Your score now : " + newscore);
+		wordLabel.setText("Come on, guess it		: " + word);
+		attemptLabel.setText("Your available attempts	: " + availableAttempt);
+		guessHistoryLabel.setText("You have guessed			: "+guessHistory);
+		guessField.setText("");    	
+    }
+    
+    private Boolean isEnd(){
+		int scoreInt = Integer.parseInt(score.trim());
+    	int newscoreInt = Integer.parseInt(newscore.trim());
+		Boolean result = null;
+    	//CHECK IF THE GAME REACH END OR NOT 
+    	//Win
+		if (newscoreInt != scoreInt) result= true;    		
+    	else if (newscoreInt == scoreInt) result= false;    	
+    	return result;
+    }
+    
+    private Boolean isWin(){
+		int scoreInt = Integer.parseInt(score.trim());
+    	int newscoreInt = Integer.parseInt(newscore.trim());
+		Boolean result = null;
+    	//CHECK IF THE GAME REACH END OR NOT 
+    	//Win
+		if (newscoreInt > scoreInt) result= true;    		
+    	else if (newscoreInt < scoreInt) result= false;    	
+    	return result;
+    }
+    
+    private void WinAskReplay(){
+    	String[] options = new String[2];
+    	options[0] = new String("Yes");
+    	options[1] = new String("No");
+    	int res = JOptionPane.showOptionDialog(null,"You Win! Replay?","Congratulations", 0,JOptionPane.INFORMATION_MESSAGE,null,options,null);
+        
+    	switch (res) {
+        	case JOptionPane.YES_OPTION:
+        		SendToSocket("NEWGAME");
+        		Sleep(100);
+        		ReceiveUpdateGui();
+        	
+        	case JOptionPane.NO_OPTION:
+        		SendToSocket("EKZIT"); //Socket will detect this word and close connection
+        		System.exit(0);
+        break;
+    	}
+    }
+    
+    private void LoseAskReplay(){
+    	String[] options = new String[2];
+    	options[0] = new String("Yes");
+    	options[1] = new String("No");
+    	int res = JOptionPane.showOptionDialog(null,"You Lose! Replay?","Congratulations", 0,JOptionPane.INFORMATION_MESSAGE,null,options,null);
+    	switch (res) {
+	    	case JOptionPane.YES_OPTION:
+	    		SendToSocket("NEWGAME");
+	    		Sleep(100);
+	    		ReceiveUpdateGui();
+	    	
+	    	case JOptionPane.NO_OPTION:
+	    		SendToSocket("EKZIT"); //Socket will detect this word and close connection
+	    		System.exit(0);
+	    break;
+    	}
+    }
+    
+    private void SetupGui(){
     	JFrame f = new JFrame();
     	f.setBounds(0,0,500,300); 
     	
@@ -219,53 +282,11 @@ public class ClientMain extends JFrame implements ActionListener {
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		//When user press button
-		//First, get text field and convert all to uppercase -> need this??
-		playerInput = guessField.getText();	
-		currentGuess = playerInput.toUpperCase();
-		
-		//Apply space and append to history to be shown
-		guessHistory = guessHistory+" "+currentGuess;
-
-		//Send to Server
-		System.out.println("1 Main : Send to socket : "+currentGuess);
-		SendToSocket(currentGuess);
-		Sleep(100);//Sleep to give socket time to take the data
-		
-		//Receive back update from server
-		String msgb = ReceiveFromSocket();
-		System.out.println("4 Main : Update fr socket : "+msgb);
-		
-		//Do the rest
-		CustomSplitter(msgb);
-    	word = AfterSplit[0];
-    	availableAttempt = AfterSplit[1];
-    	newscore = AfterSplit[2];
-    	System.out.println("SCORE :"+score);
-    	System.out.println("NEWSCORE :"+newscore);
-    	int scoreInt = Integer.parseInt(score.trim());
-    	int newscoreInt = Integer.parseInt(newscore.trim());
-    	System.out.println("SCORE int :"+scoreInt);
-    	System.out.println("NEWSCORE int :"+newscoreInt);
-    	
-    	//Update
-    	scoreLabel.setText("Your score now : " + newscore);
-		wordLabel.setText("Come on, guess it		: " + word);
-		attemptLabel.setText("Your available attempts	: " + availableAttempt);
-		guessHistoryLabel.setText("You have guessed			: "+guessHistory);
-		guessField.setText("");
-		
-    	//CHECK IF THE GAME REACH END OR NOT 
-    	if (newscoreInt > scoreInt) {
-    		//WIN
-    		System.out.println("WIN!!!!!");
-    		SendToSocket("ekzit");
-    		System.exit(1);
-    		
-    	} 
-    	else if (newscoreInt < scoreInt) {
-    		//LOSE
-    		System.out.println("LOSE!!!!!");
-    	}
+		SendGuess();
+		ReceiveUpdateGui();
+		if (isEnd()){
+			if (isWin()) WinAskReplay();
+			else if(!isWin()) LoseAskReplay();			
+		}
 	}
 }
