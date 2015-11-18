@@ -61,7 +61,7 @@ public class ClientSocket implements Runnable {
         String update;
         while(true){
         	update = ReceiveFromMain();
-        	if (update == "EKZIT") break; //Break if receive EKZIT from Main
+        	if (update == "ENDGAME") break; //Break if receive EKZIT from Main
         	System.out.println("2 Socket : Rc fr main, forward to server :---"+update+"---");
         	SendToServer(update);
         	Sleep(100);
