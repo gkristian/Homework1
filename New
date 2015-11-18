@@ -1,0 +1,24 @@
+        while(isInGame)
+        {
+            inputFrClient=receiveFromClient();
+            System.out.println("Guess from client : "+inputFrClient);
+            //we want to check the input from client
+            //trialNum--;
+            if (inputFrClient=="NEWGAME") {
+                isStillPlaying=true;
+                //isInGame=false;
+            	break;
+            }
+            else if (inputFrClient=="ENDGAME") {
+                isStillPlaying=false;
+                //isInGame=false;
+            	break;
+            }
+            else{
+                wordChecking();
+                sendToClient(updateToClient);
+                                
+            }
+
+            
+        }
