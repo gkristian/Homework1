@@ -173,6 +173,7 @@ public class ClientMain extends JFrame implements ActionListener {
 		//Receive back update from server
 		String msgb = ReceiveFromSocket();
 		System.out.println("4 Main : Update fr socket : "+msgb);
+		System.out.println("===================================");
 		
 		//Do the rest
 		CustomSplitter(msgb);
@@ -221,11 +222,11 @@ public class ClientMain extends JFrame implements ActionListener {
         		SendToSocket("NEWGAME");
         		Sleep(100);
         		ReceiveUpdateGui();
-        	
+        		break;
         	case JOptionPane.NO_OPTION:
-        		SendToSocket("EKZIT"); //Socket will detect this word and close connection
+        		SendToSocket("ENDGAME"); //Socket will detect this word and close connection
         		System.exit(0);
-        break;
+        		break;
     	}
     }
     
@@ -239,11 +240,11 @@ public class ClientMain extends JFrame implements ActionListener {
 	    		SendToSocket("NEWGAME");
 	    		Sleep(100);
 	    		ReceiveUpdateGui();
-	    	
+	    		break;
 	    	case JOptionPane.NO_OPTION:
-	    		SendToSocket("EKZIT"); //Socket will detect this word and close connection
+	    		SendToSocket("ENDGAME"); //Socket will detect this word and close connection
 	    		System.exit(0);
-	    break;
+	    		break;
     	}
     }
     
@@ -276,8 +277,6 @@ public class ClientMain extends JFrame implements ActionListener {
     	f.add(mainPanel);     	
     	f.setVisible(true);
     	f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-
     }
 
 	@Override
